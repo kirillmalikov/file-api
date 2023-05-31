@@ -25,7 +25,7 @@ internal class WebSecurityConfig(
             .csrf().disable()
 
         val authorizationConfigurer = http.authorizeRequests()
-        authorizationConfigurer.antMatchers("/docs", "/docs/*").permitAll()
+        authorizationConfigurer.antMatchers("/docs", "/docs/*", "/v3/api-docs").permitAll()
 
         authorizationConfigurer
             .antMatchers("/status", "/webjars/**", "/favicon.ico").permitAll()

@@ -1,6 +1,6 @@
 package com.hrblizz.fileapi.library.log
 
-open class TraceLogItem constructor(
+open class TraceLogItem(
     method: String,
     url: String,
     status: Long,

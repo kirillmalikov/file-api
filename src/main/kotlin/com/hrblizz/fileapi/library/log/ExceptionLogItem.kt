@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import java.io.PrintWriter
 import java.io.StringWriter
 
-open class ExceptionLogItem constructor(
+open class ExceptionLogItem(
     message: String,
     @JsonIgnore val exception: Exception
 ) : LogItem("$message: <${exception::class.java.name}>") {
