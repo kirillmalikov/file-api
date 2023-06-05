@@ -1,12 +1,12 @@
 package com.hrblizz.fileapi
 
+import java.util.TimeZone
+import javax.annotation.PostConstruct
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.builder.SpringApplicationBuilder
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories
-import java.util.TimeZone
-import javax.annotation.PostConstruct
 
 @SpringBootApplication
 @EnableMongoRepositories(basePackages = ["com.hrblizz.fileapi.data.repository"])

@@ -8,6 +8,7 @@ import com.hrblizz.fileapi.controller.model.GetMetasRequest
 import com.hrblizz.fileapi.data.entities.FileEntity
 import com.hrblizz.fileapi.data.repository.FileEntityRepository
 import com.hrblizz.fileapi.library.JsonUtil.toJson
+import com.hrblizz.fileapi.service.FileStorage
 import com.jayway.jsonpath.JsonPath
 import java.time.Instant
 import java.util.UUID
@@ -149,7 +150,7 @@ internal class FilesControllerIntegrationTests(
                 .andExpect(jsonPath("$.errors", hasSize<Any>(1)))
                 .andExpect(jsonPath("$.errors[0]", aMapWithSize<Any, Any>(2)))
                 .andExpect(jsonPath("$.errors[0].message")
-                    .value("File with token = $givenToken was not found"))
+                    .value("File document with token = $givenToken was not found"))
                 .andExpect(jsonPath("$.errors[0].code").value(nullValue()))
                 .andExpect(jsonPath("$.status").value(404))
         }
@@ -165,8 +166,7 @@ internal class FilesControllerIntegrationTests(
         contentType = "text/plain",
         createTime = Instant.ofEpochMilli(123456789),
         meta = JSONObject(mapOf("creatorEmployeeId" to 1)).toString(),
-        source = "testSource",
-        content = Base64Utils.encodeToString("I cook with wine, sometimes I even add it to the food.".toByteArray())
+        source = "testSource"
     )
 
     private fun createGetMetasRequest(vararg tokens: String) =

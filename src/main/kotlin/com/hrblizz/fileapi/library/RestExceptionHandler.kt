@@ -1,6 +1,7 @@
 package com.hrblizz.fileapi.library
 
 import com.hrblizz.fileapi.controller.exception.BadRequestException
+import com.hrblizz.fileapi.controller.exception.FileApiException
 import com.hrblizz.fileapi.library.log.ExceptionLogItem
 import com.hrblizz.fileapi.library.log.Logger
 import com.hrblizz.fileapi.rest.ErrorMessage
@@ -215,6 +216,17 @@ class RestExceptionHandler(
             errorStatus.value()
         )
         return ResponseEntity(apiError, HttpHeaders(), errorStatus)
+    }
+
+    @ExceptionHandler(FileApiException::class)
+    fun handleFileApiException(e: Exception): ResponseEntity<Any> {
+        val status = HttpStatus.SERVICE_UNAVAILABLE
+
+        return ResponseEntity(com.hrblizz.fileapi.rest.ResponseEntity<Any>(
+            null,
+            listOf(ErrorMessage(e.localizedMessage)),
+            status.value()
+        ), status)
     }
 
     private fun <T> getResponseStatus(ex: Class<T>?): HttpStatus? {

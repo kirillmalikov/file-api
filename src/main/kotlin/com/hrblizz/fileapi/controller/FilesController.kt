@@ -1,11 +1,11 @@
 package com.hrblizz.fileapi.controller
 
-import com.hrblizz.fileapi.controller.exception.BadRequestException
-import com.hrblizz.fileapi.controller.exception.NotFoundException
-import com.hrblizz.fileapi.controller.model.FileMetaResponse
+import com.hrblizz.fileapi.command.DeleteFileCommand
+import com.hrblizz.fileapi.command.DownloadFileCommand
+import com.hrblizz.fileapi.command.UploadFileCommand
+import com.hrblizz.fileapi.command.GetFilesMetasCommand
 import com.hrblizz.fileapi.controller.model.GetMetasRequest
 import com.hrblizz.fileapi.controller.model.GetMetasResponse
-import com.hrblizz.fileapi.data.entities.FileEntity
 import com.hrblizz.fileapi.data.repository.FileEntityRepository
 import com.hrblizz.fileapi.rest.CREATE_TIME
 import com.hrblizz.fileapi.rest.FILE_NAME
@@ -16,15 +16,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import java.time.Instant
-import java.util.UUID
 import javax.validation.Valid
-import org.springframework.core.io.ByteArrayResource
+import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.util.Base64Utils.decodeFromString
-import org.springframework.util.Base64Utils.encodeToString
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -40,7 +38,10 @@ import org.springframework.web.multipart.MultipartFile
 @RestController
 @Tag(name = "Files")
 class FilesController(
-    private val fileEntityRepository: FileEntityRepository
+    private val uploadFileCommand: UploadFileCommand,
+    private val downloadFileCommand: DownloadFileCommand,
+    private val deleteFileCommand: DeleteFileCommand,
+    private val getFilesMetasCommand: GetFilesMetasCommand,
 ) {
 
     @PostMapping("/files")
@@ -49,58 +50,37 @@ class FilesController(
     fun uploadFiles(
         @RequestParam("name") name: String,
         @RequestParam("contentType") contentType: String,
-
         @RequestParam("meta")
-        @Schema(description = "JSON of additional meta", example = "{\"creatorEmployeeId\": 1}")
-        meta: String,
-
+        @Schema(description = "JSON of additional meta", example = "{\"creatorEmployeeId\": 1}") meta: String,
         @RequestParam("source")
-        @Schema(example = "timesheet, mss, hrb, ...")
-        source: String,
-
+        @Schema(example = "timesheet, mss, hrb, ...") source: String,
         @RequestParam("expireTime") expireTime: Instant?,
-
         @RequestParam("content")
-        @Schema(description = "File content")
-        file: MultipartFile
+        @Schema(description = "File content") file: MultipartFile
     ): Map<String, Any> {
 
         return mapOf(
-            "token" to fileEntityRepository.save(
-                FileEntity(
+            "token" to uploadFileCommand.execute(
+                UploadFileCommand.Parameters(
                     filename = name,
                     contentType = contentType,
                     meta = meta,
                     source = source,
                     expireTime = expireTime,
-                    content = encodeToString(file.bytes),
-                    size = file.size
+                    size = file.size,
+                    content = file.inputStream
                 )
-            ).token
+            )
         )
     }
 
     @PostMapping("/files/metas")
     @Operation(summary = "Get files metadata")
     fun getMetas(@RequestBody @Valid request: GetMetasRequest): ResponseEntity<GetMetasResponse> {
-        val filesMetas = fileEntityRepository.findByTokenIn(request.tokens)
+        val metasResponse = getFilesMetasCommand.execute(GetFilesMetasCommand.Parameters(request.tokens))
 
         return ResponseEntity<GetMetasResponse>(
-            GetMetasResponse(
-                filesMetas.associateBy(
-                    { it.token },
-                    {
-                        FileMetaResponse(
-                            UUID.fromString(it.token),
-                            it.filename,
-                            it.size,
-                            it.contentType,
-                            it.createTime,
-                            it.meta
-                        )
-                    }
-                )
-            ),
+            metasResponse,
             HttpStatus.OK
         )
     }
@@ -110,25 +90,28 @@ class FilesController(
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200"),
-            ApiResponse(responseCode = "404")
+            ApiResponse(responseCode = "404"),
+            ApiResponse(responseCode = "503")
         ]
     )
     fun downloadFile(@PathVariable("token") token: String): ResponseEntity<Resource> {
-        val entity = fileEntityRepository.findByToken(token)
-            ?: throw NotFoundException("File with token = $token was not found")
+        val file = downloadFileCommand.execute(token)
+        val fileDoc = file.first
+        val fileContent = file.second
 
         return ResponseEntity.ok()
-            .header(FILE_NAME, entity.filename)
-            .header(FILE_SIZE, entity.size.toString())
-            .header(CREATE_TIME, entity.createTime.toString())
-            .header(HttpHeaders.CONTENT_TYPE, entity.contentType)
-            .body(ByteArrayResource(decodeFromString(entity.content)))
+            .header(FILE_NAME, fileDoc.filename)
+            .header(FILE_SIZE, fileDoc.size.toString())
+            .header(CREATE_TIME, fileDoc.createTime.toString())
+            .header(HttpHeaders.CONTENT_TYPE, fileDoc.contentType)
+            .body(InputStreamResource(fileContent))
     }
 
     @DeleteMapping("/file/{token}")
     @Operation(summary = "Delete file")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Transactional
     fun deleteFile(@PathVariable("token") token: String) {
-        fileEntityRepository.deleteByToken(token)
+        deleteFileCommand.execute(token)
     }
 }
