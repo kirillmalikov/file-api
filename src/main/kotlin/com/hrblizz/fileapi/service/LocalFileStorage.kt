@@ -8,17 +8,19 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.nio.file.Paths
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 
-const val FILES_STORAGE_DIRECTORY = "/files-api/storage/files/"
-
 @Component
-class LocalFileStorage(private val log: Logger) : FileStorage {
+class LocalFileStorage(
+    @Value("\${localstorage.directory}") private val directory: String,
+    private val log: Logger
+) : FileStorage {
     override fun storeFile(inputStream: InputStream, key: String): Boolean {
         return try {
-            File(FILES_STORAGE_DIRECTORY).mkdirs()
+            File(directory).mkdirs()
 
-            val path = Paths.get(FILES_STORAGE_DIRECTORY, key)
+            val path = Paths.get(directory, key)
 
             FileOutputStream(path.toFile()).use { outputStream ->
                 inputStream.copyTo(outputStream)
@@ -26,41 +28,41 @@ class LocalFileStorage(private val log: Logger) : FileStorage {
 
             true
         } catch (e: Exception) {
-            log.error(ExceptionLogItem("", e))
+            log.error(ExceptionLogItem("Error occurred while storing the file $key", e))
 
-            throw FileApiException("")
+            throw FileApiException("Error occurred while storing the file")
         }
     }
 
     override fun getFile(key: String): File {
         val file: File = try {
-            Paths.get(FILES_STORAGE_DIRECTORY, key).toFile()
+            Paths.get(directory, key).toFile()
         } catch (e: Exception) {
-            log.error(ExceptionLogItem("", e))
+            log.error(ExceptionLogItem("Error occurred while getting the file $key", e))
 
-            throw FileApiException("")
+            throw FileApiException("Error occurred while getting the file")
         }
 
         if (!file.exists()) {
-            throw NotFoundException("File with key = $key was not found in storage")
+            throw NotFoundException("File was not found in storage")
         }
 
         return file
     }
 
     override fun deleteFile(key: String): Boolean {
-        val files = File(FILES_STORAGE_DIRECTORY).listFiles { _, fileName -> fileName.startsWith(key) }
+        val files = File(directory).listFiles { _, fileName -> fileName.startsWith(key) }
 
         if (files != null && files.isNotEmpty()) {
             try {
                 return files[0].delete()
             } catch (e: Exception) {
-                log.error(ExceptionLogItem("", e))
+                log.error(ExceptionLogItem("Error occurred during the delete operation of file $key", e))
 
-                throw FileApiException("")
+                throw FileApiException("Error occurred during the delete operation")
             }
+        } else {
+            throw NotFoundException("File was not found in storage")
         }
-
-        return false
     }
 }

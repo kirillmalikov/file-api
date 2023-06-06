@@ -2,11 +2,10 @@ package com.hrblizz.fileapi.controller
 
 import com.hrblizz.fileapi.command.DeleteFileCommand
 import com.hrblizz.fileapi.command.DownloadFileCommand
-import com.hrblizz.fileapi.command.UploadFileCommand
 import com.hrblizz.fileapi.command.GetFilesMetasCommand
+import com.hrblizz.fileapi.command.UploadFileCommand
 import com.hrblizz.fileapi.controller.model.GetMetasRequest
 import com.hrblizz.fileapi.controller.model.GetMetasResponse
-import com.hrblizz.fileapi.data.repository.FileEntityRepository
 import com.hrblizz.fileapi.rest.CREATE_TIME
 import com.hrblizz.fileapi.rest.FILE_NAME
 import com.hrblizz.fileapi.rest.FILE_SIZE
@@ -22,7 +21,6 @@ import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.transaction.annotation.Transactional
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -47,9 +45,18 @@ class FilesController(
     @PostMapping("/files")
     @Operation(summary = "Upload file")
     @ResponseStatus(HttpStatus.CREATED)
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "201"),
+            ApiResponse(responseCode = "400"),
+            ApiResponse(responseCode = "503")
+        ]
+    )
     fun uploadFiles(
-        @RequestParam("name") name: String,
-        @RequestParam("contentType") contentType: String,
+        @RequestParam("name")
+        @Schema(description = "Name of a file") name: String,
+        @RequestParam("contentType")
+        @Schema(description = "Content type", example = "application/pdf") contentType: String,
         @RequestParam("meta")
         @Schema(description = "JSON of additional meta", example = "{\"creatorEmployeeId\": 1}") meta: String,
         @RequestParam("source")
@@ -58,7 +65,6 @@ class FilesController(
         @RequestParam("content")
         @Schema(description = "File content") file: MultipartFile
     ): Map<String, Any> {
-
         return mapOf(
             "token" to uploadFileCommand.execute(
                 UploadFileCommand.Parameters(
@@ -76,6 +82,12 @@ class FilesController(
 
     @PostMapping("/files/metas")
     @Operation(summary = "Get files metadata")
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200"),
+            ApiResponse(responseCode = "400")
+        ]
+    )
     fun getMetas(@RequestBody @Valid request: GetMetasRequest): ResponseEntity<GetMetasResponse> {
         val metasResponse = getFilesMetasCommand.execute(GetFilesMetasCommand.Parameters(request.tokens))
 
@@ -94,7 +106,11 @@ class FilesController(
             ApiResponse(responseCode = "503")
         ]
     )
-    fun downloadFile(@PathVariable("token") token: String): ResponseEntity<Resource> {
+    fun downloadFile(
+        @Schema(example = "3700e958-19df-45a2-be22-16cf2b2914bd")
+        @PathVariable("token")
+        token: String
+    ): ResponseEntity<Resource> {
         val file = downloadFileCommand.execute(token)
         val fileDoc = file.first
         val fileContent = file.second
@@ -110,8 +126,17 @@ class FilesController(
     @DeleteMapping("/file/{token}")
     @Operation(summary = "Delete file")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Transactional
-    fun deleteFile(@PathVariable("token") token: String) {
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204"),
+            ApiResponse(responseCode = "404"),
+            ApiResponse(responseCode = "503")
+        ]
+    )    fun deleteFile(
+        @Schema(example = "3700e958-19df-45a2-be22-16cf2b2914bd")
+        @PathVariable("token")
+        token: String
+    ) {
         deleteFileCommand.execute(token)
     }
 }

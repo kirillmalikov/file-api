@@ -12,4 +12,6 @@ interface FileEntityRepository : MongoRepository<FileEntity, Long> {
     fun findByTokenIn(tokens: Collection<String>): List<FileEntity>
 
     fun deleteByToken(token: String): Long
+
+    fun existsByToken(token: String): Boolean
 }
