@@ -8,10 +8,6 @@ class ResponseEntity<T> {
     var status: Int = 0
         private set
 
-    constructor(status: Int) {
-        this.status = status
-    }
-
     constructor(data: T?, status: Int) : this(data, null, status)
 
     constructor(data: T?, errors: List<ErrorMessage>?, status: Int) {

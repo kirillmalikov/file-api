@@ -23,7 +23,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.support.MissingServletRequestPartException
 import org.springframework.web.servlet.NoHandlerFoundException
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler
-import java.util.ArrayList
 
 @ControllerAdvice
 class RestExceptionHandler(
@@ -58,20 +57,8 @@ class RestExceptionHandler(
         headers: HttpHeaders,
         status: HttpStatus,
         request: WebRequest
-    ): ResponseEntity<Any> {
-        val errors = ArrayList<ErrorMessage>()
-        for (error in ex.bindingResult.fieldErrors) {
-            errors.add(ErrorMessage("${error.field}: ${error.defaultMessage}"))
-        }
-        for (error in ex.bindingResult.globalErrors) {
-            errors.add(ErrorMessage("${error.objectName}: ${error.defaultMessage}"))
-        }
-
-        val errorStatus = HttpStatus.BAD_REQUEST
-        val apiError = com.hrblizz.fileapi.rest.ResponseEntity<Any>(null, errors, errorStatus.value())
-
-        return handleExceptionInternal(ex, apiError, headers, errorStatus, request)
-    }
+    ): ResponseEntity<Any> =
+        handleBindException(ex, headers, status, request)
 
     override fun handleBindException(
         ex: BindException,
