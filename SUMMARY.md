@@ -14,6 +14,7 @@ To run this application you need to download it and execute CLI command
 ``./do.sh start
 ``
 or use your preferable IDE to import this project as Spring app and run it from there.
+For more technical details please refer to [README.md](README.md)
 
 ## Comments
 
